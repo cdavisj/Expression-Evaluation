@@ -5,41 +5,71 @@
 #include "stack.h"
 
 // function for getting precedence of an operator
-int precedence(char op) 
+int getOperatorPrecedence(char op) 
 {
-    if (op == '+' || op == '-')
-        return 1;
-    else if (op == '*' || op == '/')
-        return 2;
-
-    // invalid operator
-    return -1;
-}
-
-// function for applying an operator
-int applyOp(int a, int b, char op)
-{
-    switch (op)
+    if (op == '+' || op == '-') // addition or subtraction
     {
-    case '+':
-        return a + b;
-    case '-':
-        return a - b;
-    case '*':
-        return a * b;
-    case '/':
-        return a / b;
+        // return 1 for lower precedence than multiplication and division
+        return 1;
+    }
+    else if (op == '*' || op == '/') // multiplication or division
+    {
+        // return 2 for higher precedence than addition and subtraction
+        return 2;
+    }
+    else if (op == '(' || op == ')') // opening or closing parenthesis
+    {
+        // return any number with no error message
+        return 0;
+    }
+    else // invalid operator
+    {
+        // display error message
+        std::cout << "Error: Invalid operator.\n";
 
-    default:
-        // invalid operator
+        // return error number
         return -1;
     }
 }
 
-int evaluate(std::string expr) 
+// function for applying an operator
+int evaluateSubExpression(int num1, int num2, char op)
 {
-    // create integer stack for values
-    stack<int> values;
+    if (op == '+') // addition
+    {
+        // return the sum
+        return num1 + num2;
+    }
+    else if (op == '-') // subtraction
+    {
+        // return the difference
+        return num1 - num2;
+    }
+    else if (op == '*') // multiplication
+    {
+        // return the product
+        return num1 * num2;
+    }
+    else if (op == '/') // division
+    {
+        // return the quotient
+        return num1 / num2;
+    }
+    else // invalid operator
+    {
+        // display error message
+        std::cout << "Error: Invalid operator.\n";
+
+        // return error number
+        return -1;
+    }
+}
+
+// function for evaluating main expression
+int evaluateExpression(std::string expr) 
+{
+    // create integer stack for numbers
+    stack<int> nums;
 
     // create char stack for operators
     stack<char> ops;
@@ -47,100 +77,122 @@ int evaluate(std::string expr)
     // iterate through the string for the expression
     for (int i = 0; i < expr.length(); i++)
     {
-        if (expr[i] == ' ')
+        if (expr[i] == ' ') // space
         {
             // if we have a space, pass over it
             continue;
         }
-        else if (expr[i] == '(') 
+        else if (expr[i] == '(') // opening parenthesis
         {
             // push opening parenthesis into operator stack
             std::cout << "pushing " << expr[i] << "\n";
             ops.push(expr[i]);
         }
-        else if (isdigit(expr[i])) 
+        else if (isdigit(expr[i])) // digit
         {
-            int val = 0;
+            // initialize variable for the number found
+            int num = 0;
+
+            // initialize variable for index starting at current index (i)
             int j = i;
 
+            // iterate forward while we still have digits
             while (j < expr.length() && isdigit(expr[j]))
             {
-                val = (val * 10) + (expr[j] - '0');
+                // update num
+                num = (num * 10) + (expr[j] - '0');
+
+                // increment index
                 j++;
             }
 
-            std::cout << "pushing " << val << "\n";
-            values.push(val);
+            // push resultant number into number stack
+            std::cout << "pushing " << num << "\n";
+            nums.push(num);
         } 
-        else if (expr[i] == ')')
+        else if (expr[i] == ')') // closing parenthesis
         {
+            // evaluate expression back until last opening parenthesis
             while (!ops.empty() && ops.top() != '(')
             {
-                std::cout << "popping " << values.top() << "\n";
-                int val2 = values.pop();
+                // pop number into num2
+                std::cout << "popping " << nums.top() << "\n";
+                int num2 = nums.pop();
 
+                // pop operator
                 std::cout << "popping " << ops.top() << "\n";
                 char op = ops.pop();
 
-                std::cout << "popping " << values.top() << "\n";
-                int val1 = values.pop();
+                // pop number into num1
+                std::cout << "popping " << nums.top() << "\n";
+                int num1 = nums.pop();
 
-                std::cout << "pushing " << applyOp(val1, val2, op) << "\n";
-                values.push(applyOp(val1, val2, op));
+                // evaluate the sub expression and push the result into the number stack
+                std::cout << "pushing " << evaluateSubExpression(num1, num2, op) << "\n";
+                nums.push(evaluateSubExpression(num1, num2, op));
             }
 
+            // if there is still a closing parenthesis to pop, do so
             if (!ops.empty())
             {
                 std::cout << "popping " << ops.top() << "\n";
                 ops.pop();
             }
         } 
-        else
+        else // operator
         {
-            while ((!ops.empty()) && precedence(ops.top()) >= precedence(expr[i])) 
+            // while the last operator pushed to the operator stack has
+            // higher precedence than the operator encountered,
+            // evaluate the last sub-expression
+            while ((!ops.empty()) && getOperatorPrecedence(ops.top()) >= getOperatorPrecedence(expr[i])) 
             {
-                std::cout << "popping " << values.top() << "\n";
-                int val2 = values.pop();
+                // pop number from number stack
+                std::cout << "popping " << nums.top() << "\n";
+                int num2 = nums.pop();
 
+                // pop operator from operator stack
                 std::cout << "popping " << ops.top() << "\n";
                 char op = ops.pop();
 
-                std::cout << "popping " << values.top() << "\n";
-                int val1 = values.pop();
+                // pop another number from number stack
+                std::cout << "popping " << nums.top() << "\n";
+                int num1 = nums.pop();
 
-                std::cout << "pushing " << applyOp(val1, val2, op) << "\n";
-                values.push(applyOp(val1, val2, op));
+                // evaluate sub-expression and push result to number stack
+                std::cout << "pushing " << evaluateSubExpression(num1, num2, op) << "\n";
+                nums.push(evaluateSubExpression(num1, num2, op));
             }
 
+            // push operator to operator stack
             std::cout << "pushing " << expr[i] << "\n";
             ops.push(expr[i]);
         }
     }
 
-    // evaluate what remains in the stacks
+    // evaluate what remains in the number and operator stack
     while (!ops.empty()) 
     {
-        // pop top value into val2
-        std::cout << "popping " << values.top() << "\n";
-        int val2 = values.pop();
+        // pop top number into num2
+        std::cout << "popping " << nums.top() << "\n";
+        int num2 = nums.pop();
 
         // pop last operator
         std::cout << "popping " << ops.top() << "\n";
         char op = ops.pop();
 
-        // pop next value into val1
-        std::cout << "popping " << values.top() << "\n";
-        int val1 = values.pop();
+        // pop next number into num1
+        std::cout << "popping " << nums.top() << "\n";
+        int num1 = nums.pop();
 
-        // evaluate and push the result into values stack
-        std::cout << "pushing " << applyOp(val1, val2, op) << "\n";
-        values.push(applyOp(val1, val2, op));
+        // evaluate and push the result into numbers stack
+        std::cout << "pushing " << evaluateSubExpression(num1, num2, op) << "\n";
+        nums.push(evaluateSubExpression(num1, num2, op));
 
     }
 
-    // pop the final value and return it
-    std::cout << "popping " << values.top() << "\n";
-    return values.pop();
+    // pop the final number and return it
+    std::cout << "popping " << nums.top() << "\n";
+    return nums.pop();
 }
 
 int main()
@@ -170,7 +222,7 @@ int main()
     std::cout << expression << std::endl;
 
     // run evaluation and assign its result to a variable
-    int result = evaluate(expression);
+    int result = evaluateExpression(expression);
 
     // output the result of the evaluation
     std::cout << result << std::endl;
