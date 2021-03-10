@@ -3,6 +3,13 @@
 #include <string>
 
 #include "stack.h"
+#include "Console.h"
+
+/*
+*   ---------------------------------------------
+*   |            FUNCTIONS FOR LOGIC            |
+*   ---------------------------------------------
+*/
 
 // function for getting precedence of an operator
 int getOperatorPrecedence(char op);
@@ -13,6 +20,17 @@ int evaluateSubExpression(int num1, int num2, char op);
 // function for evaluating main expression
 int evaluateExpression(std::string);
 
+/*
+*   ---------------------------------------------
+*   |          FUNCTIONS FOR ANIMATION          |
+*   ---------------------------------------------
+*/
+
+void drawStacks(int startx, int starty);
+
+void pushAnimation();
+
+void popAnimation();
 
 int main()
 {
@@ -45,6 +63,8 @@ int main()
 
     // output the result of the evaluation
     std::cout << result << std::endl;
+
+    drawStacks(10, 5);
 
     // pause console
     std::cin.get();
@@ -137,18 +157,18 @@ int evaluateExpression(std::string expr)
             // initialize variable for the number found
             int num = 0;
 
-            // initialize variable for index starting at current index (i)
-            int j = i;
-
             // iterate forward while we still have digits
-            while (j < (int)expr.length() && isdigit(expr[j]))
+            while (i < (int)expr.length() && isdigit(expr[i]))
             {
                 // update num
-                num = (num * 10) + (expr[j] - '0');
+                num = (num * 10) + (expr[i] - '0');
 
                 // increment index
-                j++;
+                i++;
             }
+
+            // bring i back 1 to account for extra increment
+            i--;
 
             // push resultant number into number stack
             std::cout << "pushing " << num << "\n";
@@ -237,4 +257,134 @@ int evaluateExpression(std::string expr)
     // pop the final number and return it
     std::cout << "popping " << nums.top() << "\n";
     return nums.pop();
+}
+
+void drawStacks(int startx, int starty)
+{
+    // for saving console cursor position at any time
+    COORD pos;
+
+    console::clear();
+    console::showCursor(false);
+    console::setTextColor(red);
+
+    // starting point
+    console::gotoxy(startx, starty);
+
+    // left wall
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(down);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(down);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(down);
+    std::cout << (char)219;
+    console::sleep(250);
+    
+    // name of stack
+    // save cursor position
+    pos = console::getCursorPos();
+
+    console::moveCursor(down);
+    std::cout << "Nums";
+
+    // go back to previous cursor position
+    console::gotoxy(pos);
+
+    // floor
+    console::moveCursor(right);
+    std::cout << (char)220;
+    console::sleep(250);
+
+    console::moveCursor(right);
+    std::cout << (char)220;
+    console::sleep(250);
+
+    // right wall
+    console::moveCursor(right);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(up);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(up);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(up);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    // starting point for second stack
+    console::gotoxy(startx + 8, starty);
+
+    // left wall
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(down);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(down);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(down);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    // name of stack
+    // save cursor position
+    pos = console::getCursorPos();
+
+    console::moveCursor(down);
+    std::cout << "Ops";
+
+    // go back to previous cursor position
+    console::gotoxy(pos);
+
+    // floor
+    console::moveCursor(right);
+    std::cout << (char)220;
+    console::sleep(250);
+
+    console::moveCursor(right);
+    std::cout << (char)220;
+    console::sleep(250);
+
+    // right wall
+    console::moveCursor(right);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(up);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(up);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::moveCursor(up);
+    std::cout << (char)219;
+    console::sleep(250);
+
+    console::setTextColor(white);
+}
+
+void pushAnimation()
+{
+}
+
+void popAnimation()
+{
 }
