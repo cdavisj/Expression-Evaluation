@@ -2,12 +2,31 @@
 
 #include <Windows.h>
 
-enum Color
+// struct for points
+struct coord
 {
-    yellow = 6, green = 10, red = 12, purple = 13, white = 15
+    int x;
+    int y;
+
+    coord()
+        : x(0), y(0)
+    {
+    }
+
+    coord(int a, int b)
+        : x(a), y(b)
+    {
+    }
 };
 
-enum Direction
+enum color
+{
+    dark_blue = 1, dark_green, dark_teal, dark_red, purple, 
+    dark_yellow, dark_white, grey, blue, green, light_blue, 
+    red, pink, yellow, white
+};
+
+enum direction
 {
     up, down, left, right
 };
@@ -41,26 +60,40 @@ namespace console
         SetConsoleCursorPosition(handle, pos);
     }
 
-    COORD getCursorPos()
+    void gotoxy(coord p)
     {
+        HANDLE handle;
         COORD pos;
+        pos.X = p.x;
+        pos.Y = p.y;
+
+        handle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+        if (handle == INVALID_HANDLE_VALUE)
+            return;
+
+        SetConsoleCursorPosition(handle, pos);
+    }
+
+    coord getCursorPos()
+    {
+        coord pos;
         CONSOLE_SCREEN_BUFFER_INFO screenBufferInfo;
         HANDLE hStd = GetStdHandle(STD_OUTPUT_HANDLE);
 
         if (!GetConsoleScreenBufferInfo(hStd, &screenBufferInfo))
             printf("GetConsoleScreenBufferInfo (%d)\n", GetLastError());
 
-        pos.X = screenBufferInfo.dwCursorPosition.X;
-        pos.Y = screenBufferInfo.dwCursorPosition.Y;
+        pos.x = screenBufferInfo.dwCursorPosition.X;
+        pos.y = screenBufferInfo.dwCursorPosition.Y;
 
         return pos;
     }
 
-    void moveCursor(Direction dir)
+    void moveCursor(direction dir)
     {
         // store current cursor position
-        COORD pos = getCursorPos();
-        pos.X--;
+        coord pos = getCursorPos();
 
         // check which direction to move
         switch (dir)
@@ -68,10 +101,10 @@ namespace console
         case up:
 
             // make sure we can go up
-            if (pos.Y - 1 >= 0)
+            if (pos.y - 1 >= 0)
             {
                 // go up
-                gotoxy(pos.X, pos.Y - 1);
+                gotoxy(pos.x, pos.y - 1);
             }
 
             break;
@@ -79,17 +112,17 @@ namespace console
         case down:
 
             // go down
-            gotoxy(pos.X, pos.Y + 1);
+            gotoxy(pos.x, pos.y + 1);
 
             break;
 
         case left:
 
             // make sure we can go left
-            if (pos.X - 1 >= 0)
+            if (pos.x - 1 >= 0)
             {
                 // go left
-                gotoxy(pos.X - 1, pos.Y);
+                gotoxy(pos.x - 1, pos.y);
             }
 
             break;
@@ -97,7 +130,7 @@ namespace console
         case right:
 
             // go right
-            gotoxy(pos.X + 1, pos.Y);
+            gotoxy(pos.x + 1, pos.y);
 
             break;
 
@@ -153,7 +186,7 @@ namespace console
         SetConsoleCursorPosition(handle, origin);
     }
 
-    void setTextColor(Color color)
+    void setTextColor(color color)
     {
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
     }

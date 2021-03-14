@@ -12,13 +12,13 @@
 */
 
 // function for getting precedence of an operator
-int getOperatorPrecedence(char op);
+int precedence(char);
 
 // function for applying an operator
-int evaluateSubExpression(int num1, int num2, char op);
+int applyOp(int, int, char);
 
 // function for evaluating main expression
-int evaluateExpression(std::string);
+int evaluate(std::string);
 
 /*
 *   ---------------------------------------------
@@ -26,7 +26,36 @@ int evaluateExpression(std::string);
 *   ---------------------------------------------
 */
 
-void drawStacks(int startx, int starty);
+#define wall (char)219
+#define floor (char)219
+
+std::string expression;
+
+int sleep_time = 50;
+
+coord stack_origin = coord(20, 10);
+
+int stack_width = 5;
+
+int stack_height = 7;
+
+int stack_gap = 21;
+
+coord expression_origin;
+
+coord num_stack_bottom_pos = coord(stack_origin.x + 2, stack_origin.y + stack_height - 2);
+
+coord num_stack_top_pos = coord(stack_origin.x + 2, stack_origin.y);
+
+coord op_stack_bottom_pos = coord(stack_origin.x + 2 + stack_width + stack_gap, stack_origin.y + stack_height - 2);
+
+coord op_stack_top_pos = coord(stack_origin.x + 2 + stack_width + stack_gap, stack_origin.y);
+
+int sub_expression_len = 9;
+
+coord sub_expression_pos = coord(stack_origin.x + stack_width + (stack_gap - sub_expression_len) / 2, stack_origin.y + stack_height / 2);
+
+void drawStacks();
 
 void pushAnimation();
 
@@ -36,9 +65,6 @@ int main()
 {
     // open file containing expression
     std::ifstream file("c:\\temp\\input.txt");
-
-    // create string for expression
-    std::string expression;
 
     // make sure file opened correctly
     if (file.is_open())
@@ -54,24 +80,26 @@ int main()
         // display error message for file not opening
         std::cout << "Error: File could not be opened.\n";
     }
-    
-    // display expression from file
-    std::cout << expression << std::endl;
+
+    // assign expression_origin
+    expression_origin = coord(stack_origin.x + ((stack_width * 2 + stack_gap) - (int)expression.size()) / 2,
+                              stack_origin.y - 4);
+
+    // draw stacks
+    drawStacks();
+
+    // pause console
+    std::cin.get();
 
     // run evaluation and assign its result to a variable
-    int result = evaluateExpression(expression);
-
-    // output the result of the evaluation
-    std::cout << result << std::endl;
-
-    drawStacks(10, 5);
+    int result = evaluate(expression);
 
     // pause console
     std::cin.get();
     return 0;
 }
 
-int getOperatorPrecedence(char op)
+int precedence(char op)
 {
     if (op == '+' || op == '-') // addition or subtraction
     {
@@ -98,7 +126,7 @@ int getOperatorPrecedence(char op)
     }
 }
 
-int evaluateSubExpression(int num1, int num2, char op)
+int applyOp(int num1, int num2, char op)
 {
     if (op == '+') // addition
     {
@@ -130,7 +158,7 @@ int evaluateSubExpression(int num1, int num2, char op)
     }
 }
 
-int evaluateExpression(std::string expr)
+int evaluate(std::string expression)
 {
     // create integer stack for numbers
     stack<int> nums;
@@ -139,29 +167,29 @@ int evaluateExpression(std::string expr)
     stack<char> ops;
 
     // iterate through the string for the expression
-    for (int i = 0; i < (int)expr.length(); i++)
+    for (int i = 0; i < (int)expression.length(); i++)
     {
-        if (expr[i] == ' ') // space
+        if (expression[i] == ' ') // space
         {
             // if we have a space, pass over it
             continue;
         }
-        else if (expr[i] == '(') // opening parenthesis
+        else if (expression[i] == '(') // opening parenthesis
         {
             // push opening parenthesis into operator stack
-            std::cout << "pushing " << expr[i] << "\n";
-            ops.push(expr[i]);
+            std::cout << "pushing " << expression[i] << "\n";
+            ops.push(expression[i]);
         }
-        else if (isdigit(expr[i])) // digit
+        else if (isdigit(expression[i])) // digit
         {
             // initialize variable for the number found
             int num = 0;
 
             // iterate forward while we still have digits
-            while (i < (int)expr.length() && isdigit(expr[i]))
+            while (i < (int)expression.length() && isdigit(expression[i]))
             {
                 // update num
-                num = (num * 10) + (expr[i] - '0');
+                num = (num * 10) + (expression[i] - '0');
 
                 // increment index
                 i++;
@@ -174,7 +202,7 @@ int evaluateExpression(std::string expr)
             std::cout << "pushing " << num << "\n";
             nums.push(num);
         }
-        else if (expr[i] == ')') // closing parenthesis
+        else if (expression[i] == ')') // closing parenthesis
         {
             // evaluate expression back until last opening parenthesis
             while (!ops.empty() && ops.top() != '(')
@@ -192,8 +220,8 @@ int evaluateExpression(std::string expr)
                 int num1 = nums.pop();
 
                 // evaluate the sub expression and push the result into the number stack
-                std::cout << "pushing " << evaluateSubExpression(num1, num2, op) << "\n";
-                nums.push(evaluateSubExpression(num1, num2, op));
+                std::cout << "pushing " << applyOp(num1, num2, op) << "\n";
+                nums.push(applyOp(num1, num2, op));
             }
 
             // if there is still a closing parenthesis to pop, do so
@@ -208,7 +236,7 @@ int evaluateExpression(std::string expr)
             // while the last operator pushed to the operator stack has
             // higher precedence than the operator encountered,
             // evaluate the last sub-expression
-            while ((!ops.empty()) && getOperatorPrecedence(ops.top()) >= getOperatorPrecedence(expr[i]))
+            while ((!ops.empty()) && precedence(ops.top()) >= precedence(expression[i]))
             {
                 // pop number from number stack
                 std::cout << "popping " << nums.top() << "\n";
@@ -223,13 +251,13 @@ int evaluateExpression(std::string expr)
                 int num1 = nums.pop();
 
                 // evaluate sub-expression and push result to number stack
-                std::cout << "pushing " << evaluateSubExpression(num1, num2, op) << "\n";
-                nums.push(evaluateSubExpression(num1, num2, op));
+                std::cout << "pushing " << applyOp(num1, num2, op) << "\n";
+                nums.push(applyOp(num1, num2, op));
             }
 
             // push operator to operator stack
-            std::cout << "pushing " << expr[i] << "\n";
-            ops.push(expr[i]);
+            std::cout << "pushing " << expression[i] << "\n";
+            ops.push(expression[i]);
         }
     }
 
@@ -249,8 +277,8 @@ int evaluateExpression(std::string expr)
         int num1 = nums.pop();
 
         // evaluate and push the result into numbers stack
-        std::cout << "pushing " << evaluateSubExpression(num1, num2, op) << "\n";
-        nums.push(evaluateSubExpression(num1, num2, op));
+        std::cout << "pushing " << applyOp(num1, num2, op) << "\n";
+        nums.push(applyOp(num1, num2, op));
 
     }
 
@@ -259,125 +287,191 @@ int evaluateExpression(std::string expr)
     return nums.pop();
 }
 
-void drawStacks(int startx, int starty)
+void drawStacks()
 {
-    // for saving console cursor position at any time
-    COORD pos;
+    // strings for stack tags
+    std::string numTag = "Numbers";
+    std::string opTag = "Operators";
 
+    // clear screen and hide cursor
     console::clear();
     console::showCursor(false);
+
+    // go to expression origin
+    console::gotoxy(expression_origin);
+
+    // set color for expression
+    console::setTextColor(yellow);
+
+    // display expression
+    for (int i = 0; i < (int)expression.size(); i++)
+    {
+        // display character
+        std::cout << expression[i];
+
+        // sleep for non-space characters
+        if (expression[i] != ' ')
+            console::sleep(sleep_time);
+    }
+
+
+    /*
+    *   NUMBER STACK ANIMATION
+    */
+
+    // starting point for stacks
+    console::gotoxy(stack_origin);
+
+    // set color for nums stack
+    console::setTextColor(blue);
+
+    // left wall
+    std::cout << wall;
+    console::sleep(sleep_time);
+
+    for (int i = 0; i < stack_height - 1; i++)
+    {
+        console::moveCursor(left);
+        console::moveCursor(down);
+        std::cout << wall;
+        console::sleep(sleep_time);
+    }
+    
+    // save cursor position
+    coord pos = console::getCursorPos();
+
+    // position cursor for num stack tag
+    console::moveCursor(left);
+    console::moveCursor(left);
+    console::moveCursor(down);
+    
+    // save position num stack tag
+    coord numTagPos = console::getCursorPos();
+
+    // go back to previous cursor position
+    console::gotoxy(pos);
+
+    // output floor
+    for (int i = 0; i < stack_width - 2; i++)
+    {
+        std::cout << floor;
+        console::sleep(sleep_time);
+    }
+
+    // right wall
+    std::cout << wall;
+    console::sleep(sleep_time);
+
+    for (int i = 0; i < stack_height - 1; i++)
+    {
+        console::moveCursor(left);
+        console::moveCursor(up);
+        std::cout << wall;
+        console::sleep(sleep_time);
+    }
+
+
+    /*
+    *   OPERATOR STACK ANIMATION
+    */
+
+    // set color for nums stack
     console::setTextColor(red);
 
-    // starting point
-    console::gotoxy(startx, starty);
-
-    // left wall
-    std::cout << (char)219;
-    console::sleep(250);
-
-    console::moveCursor(down);
-    std::cout << (char)219;
-    console::sleep(250);
-
-    console::moveCursor(down);
-    std::cout << (char)219;
-    console::sleep(250);
-
-    console::moveCursor(down);
-    std::cout << (char)219;
-    console::sleep(250);
-    
-    // name of stack
-    // save cursor position
-    pos = console::getCursorPos();
-
-    console::moveCursor(down);
-    std::cout << "Nums";
-
-    // go back to previous cursor position
-    console::gotoxy(pos);
-
-    // floor
-    console::moveCursor(right);
-    std::cout << (char)220;
-    console::sleep(250);
-
-    console::moveCursor(right);
-    std::cout << (char)220;
-    console::sleep(250);
-
-    // right wall
-    console::moveCursor(right);
-    std::cout << (char)219;
-    console::sleep(250);
-
-    console::moveCursor(up);
-    std::cout << (char)219;
-    console::sleep(250);
-
-    console::moveCursor(up);
-    std::cout << (char)219;
-    console::sleep(250);
-
-    console::moveCursor(up);
-    std::cout << (char)219;
-    console::sleep(250);
-
     // starting point for second stack
-    console::gotoxy(startx + 8, starty);
+    console::gotoxy(stack_origin.x + stack_width + stack_gap, stack_origin.y);
 
     // left wall
-    std::cout << (char)219;
-    console::sleep(250);
+    std::cout << wall;
+    console::sleep(sleep_time);
 
-    console::moveCursor(down);
-    std::cout << (char)219;
-    console::sleep(250);
+    for (int i = 0; i < stack_height - 1; i++)
+    {
+        console::moveCursor(left);
+        console::moveCursor(down);
+        std::cout << wall;
+        console::sleep(sleep_time);
+    }
 
-    console::moveCursor(down);
-    std::cout << (char)219;
-    console::sleep(250);
-
-    console::moveCursor(down);
-    std::cout << (char)219;
-    console::sleep(250);
-
-    // name of stack
     // save cursor position
     pos = console::getCursorPos();
 
+    // position cursor for operator tag
+    console::moveCursor(left);
+    console::moveCursor(left);
+    console::moveCursor(left);
     console::moveCursor(down);
-    std::cout << "Ops";
+
+    // save position for operator tag
+    coord opTagPos = console::getCursorPos();
 
     // go back to previous cursor position
     console::gotoxy(pos);
 
     // floor
-    console::moveCursor(right);
-    std::cout << (char)220;
-    console::sleep(250);
-
-    console::moveCursor(right);
-    std::cout << (char)220;
-    console::sleep(250);
+    for (int i = 0; i < stack_width - 2; i++)
+    {
+        std::cout << floor;
+        console::sleep(sleep_time);
+    }
 
     // right wall
-    console::moveCursor(right);
-    std::cout << (char)219;
-    console::sleep(250);
+    std::cout << wall;
+    console::sleep(sleep_time);
 
-    console::moveCursor(up);
-    std::cout << (char)219;
-    console::sleep(250);
+    for (int i = 0; i < stack_height - 1; i++)
+    {
+        console::moveCursor(left);
+        console::moveCursor(up);
+        std::cout << wall;
+        console::sleep(sleep_time);
+    }
 
-    console::moveCursor(up);
-    std::cout << (char)219;
-    console::sleep(250);
+    // go to coord for number stack tag
+    console::gotoxy(numTagPos);
 
-    console::moveCursor(up);
-    std::cout << (char)219;
-    console::sleep(250);
+    // set color for number stack tag
+    console::setTextColor(blue);
 
+    // output number stack tag
+    for (int i = 0; i < (int)numTag.size(); i++)
+    {
+        std::cout << numTag[i];
+        console::sleep(sleep_time);
+    }
+
+    // go to coord for number stack tag
+    console::gotoxy(opTagPos);
+
+    // set color for operator stack tag
+    console::setTextColor(red);
+
+    // output operator stack tag
+    for (int i = 0; i < (int)opTag.size(); i++)
+    {
+        std::cout << opTag[i];
+        console::sleep(sleep_time);
+    }
+
+    // testing
+    console::setTextColor(yellow);
+
+    console::gotoxy(num_stack_bottom_pos);
+    std::cout << "n";
+
+    console::gotoxy(num_stack_top_pos);
+    std::cout << "n";
+
+    console::gotoxy(op_stack_bottom_pos);
+    std::cout << "o";
+
+    console::gotoxy(op_stack_top_pos);
+    std::cout << "o";
+
+    console::gotoxy(sub_expression_pos);
+    std::cout << "s u b = r";
+
+    // reset text color to white
     console::setTextColor(white);
 }
 
