@@ -55,6 +55,10 @@ int sub_expression_len = 9;
 
 coord sub_expression_pos = coord(stack_origin.x + stack_width + (stack_gap - sub_expression_len) / 2, stack_origin.y + stack_height / 2);
 
+int items_in_num_stack = 0;
+
+int items_in_op_stack = 0;
+
 void drawStacks();
 
 void pushAnimation();
