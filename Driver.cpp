@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <math.h>
 
 #include "stack.h"
 #include "Console.h"
@@ -22,49 +23,94 @@ int evaluate(std::string);
 
 /*
 *   ---------------------------------------------
-*   |          FUNCTIONS FOR ANIMATION          |
+*   |                  ANIMATION                |
 *   ---------------------------------------------
 */
 
+// preprocessor definitions for wall and floor characters
 #define wall (char)219
 #define floor (char)219
 
+// string for expression
 std::string expression;
 
+// create integer stack for numbers
+stack<int> number_stack;
+
+// create char stack for operators
+stack<char> operator_stack;
+
+// sleep time between each update
 int sleep_time = 50;
 
+// location of the beginning of the stacks
 coord stack_origin = coord(20, 10);
 
-int stack_width = 5;
+// width of stacks
+int stack_width = 7;
 
-int stack_height = 7;
+// height of stacks
+int stack_height = 10;
 
-int stack_gap = 21;
+// gap beween stacks
+int stack_gap = 30;
 
+// space gap between sub-expression arguments
+int sub_expr_gap = 4;
+
+// for expression loction above stacks
 coord expression_origin;
 
-coord num_stack_bottom_pos = coord(stack_origin.x + 2, stack_origin.y + stack_height - 2);
+// location of bottom of number stack
+coord num_stack_bottom_pos = coord(stack_origin.x + 3, stack_origin.y + stack_height - 2);
 
-coord num_stack_top_pos = coord(stack_origin.x + 2, stack_origin.y);
+// location of top of number stack
+coord num_stack_top_pos = coord(stack_origin.x + 3, stack_origin.y);
 
-coord op_stack_bottom_pos = coord(stack_origin.x + 2 + stack_width + stack_gap, stack_origin.y + stack_height - 2);
+// location of bottom of operator stack
+coord op_stack_bottom_pos = coord(stack_origin.x + 3 + stack_width + stack_gap, stack_origin.y + stack_height - 2);
 
-coord op_stack_top_pos = coord(stack_origin.x + 2 + stack_width + stack_gap, stack_origin.y);
+// location of top of operator stack
+coord op_stack_top_pos = coord(stack_origin.x + 3 + stack_width + stack_gap, stack_origin.y);
 
-int sub_expression_len = 9;
+// length of subexpression for aligning
+int sub_expression_len = sub_expr_gap * 5;
 
-coord sub_expression_pos = coord(stack_origin.x + stack_width + (stack_gap - sub_expression_len) / 2, stack_origin.y + stack_height / 2);
+// position beween stacks for the beginning of the subexpressions
+coord sub_expression_pos = coord(stack_origin.x + stack_width + (stack_gap - sub_expression_len) / 2, 
+                                stack_origin.y + stack_height / 2);
 
-int items_in_num_stack = 0;
+// print spaces over an integer passed
+void printSpaces(int);
 
-int items_in_op_stack = 0;
-
+// draw initial stacks
 void drawStacks();
 
-void pushAnimation();
+// animation for pushing numbers to the number stack
+void pushNumAnimation(int, int);
 
-void popAnimation();
+// animation for pushing sub-expression results to the number stack
+void pushSubExpressionResultAnimation(int);
 
+// animation for pushing operators to the operator stack
+void pushOpAnimation(int, char);
+
+// animation for popping num1 from the number stack for the sub-expression
+void popNum1Animation(int);
+
+// animation for popping num2 from the number stack for the sub-expression
+void popNum2Animation(int);
+
+// animation for popping op from the operator stack for the sub-expression
+void popOpAnimation(char);
+
+// animation for popping opening parentheses from operator stack
+void popParenthesisAnimation(char);
+
+// animation for popping the result from the stack and displaying it in front of original expression
+void popResultAnimation(int);
+
+// main driver
 int main()
 {
     // open file containing expression
@@ -92,11 +138,11 @@ int main()
     // draw stacks
     drawStacks();
 
-    // pause console
-    std::cin.get();
-
     // run evaluation and assign its result to a variable
     int result = evaluate(expression);
+
+    // reset text color to white
+    console::setTextColor(white);
 
     // pause console
     std::cin.get();
@@ -164,12 +210,6 @@ int applyOp(int num1, int num2, char op)
 
 int evaluate(std::string expression)
 {
-    // create integer stack for numbers
-    stack<int> nums;
-
-    // create char stack for operators
-    stack<char> ops;
-
     // iterate through the string for the expression
     for (int i = 0; i < (int)expression.length(); i++)
     {
@@ -180,9 +220,11 @@ int evaluate(std::string expression)
         }
         else if (expression[i] == '(') // opening parenthesis
         {
+            // run animation for pushing operator to op stack
+            pushOpAnimation(i, expression[i]);
+
             // push opening parenthesis into operator stack
-            std::cout << "pushing " << expression[i] << "\n";
-            ops.push(expression[i]);
+            operator_stack.push(expression[i]);
         }
         else if (isdigit(expression[i])) // digit
         {
@@ -202,37 +244,50 @@ int evaluate(std::string expression)
             // bring i back 1 to account for extra increment
             i--;
 
+            // run animation for pushing number to num stack
+            pushNumAnimation(i, num);
+
             // push resultant number into number stack
-            std::cout << "pushing " << num << "\n";
-            nums.push(num);
+            number_stack.push(num);
         }
         else if (expression[i] == ')') // closing parenthesis
         {
             // evaluate expression back until last opening parenthesis
-            while (!ops.empty() && ops.top() != '(')
+            while (!operator_stack.empty() && operator_stack.top() != '(')
             {
+                // run animation for popping num2 to sub expression
+                popNum2Animation(number_stack.top());
+
                 // pop number into num2
-                std::cout << "popping " << nums.top() << "\n";
-                int num2 = nums.pop();
+                int num2 = number_stack.pop();
+
+                // run animation for popping op to sub expression
+                popOpAnimation(operator_stack.top());
 
                 // pop operator
-                std::cout << "popping " << ops.top() << "\n";
-                char op = ops.pop();
+                char op = operator_stack.pop();
+
+                // run animation for popping num1 to sub expression
+                popNum1Animation(number_stack.top());
 
                 // pop number into num1
-                std::cout << "popping " << nums.top() << "\n";
-                int num1 = nums.pop();
+                int num1 = number_stack.pop();
+
+                // run animation for pushing sub expression result to num stack
+                pushSubExpressionResultAnimation(applyOp(num1, num2, op));
 
                 // evaluate the sub expression and push the result into the number stack
-                std::cout << "pushing " << applyOp(num1, num2, op) << "\n";
-                nums.push(applyOp(num1, num2, op));
+                number_stack.push(applyOp(num1, num2, op));
             }
 
             // if there is still a closing parenthesis to pop, do so
-            if (!ops.empty())
+            if (!operator_stack.empty())
             {
-                std::cout << "popping " << ops.top() << "\n";
-                ops.pop();
+                // run animation for popping parenthesis
+                popParenthesisAnimation(operator_stack.top());
+
+                // pop parenthesis from stack
+                operator_stack.pop();
             }
         }
         else // operator
@@ -240,55 +295,103 @@ int evaluate(std::string expression)
             // while the last operator pushed to the operator stack has
             // higher precedence than the operator encountered,
             // evaluate the last sub-expression
-            while ((!ops.empty()) && precedence(ops.top()) >= precedence(expression[i]))
+            while ((!operator_stack.empty()) && precedence(operator_stack.top()) >= precedence(expression[i]))
             {
-                // pop number from number stack
-                std::cout << "popping " << nums.top() << "\n";
-                int num2 = nums.pop();
+                // run animation for popping num2 to sub expression
+                popNum2Animation(number_stack.top());
 
-                // pop operator from operator stack
-                std::cout << "popping " << ops.top() << "\n";
-                char op = ops.pop();
+                // pop number into num2
+                int num2 = number_stack.pop();
 
-                // pop another number from number stack
-                std::cout << "popping " << nums.top() << "\n";
-                int num1 = nums.pop();
+                // run animation for popping op to sub expression
+                popOpAnimation(operator_stack.top());
 
-                // evaluate sub-expression and push result to number stack
-                std::cout << "pushing " << applyOp(num1, num2, op) << "\n";
-                nums.push(applyOp(num1, num2, op));
+                // pop operator
+                char op = operator_stack.pop();
+
+                // run animation for popping num1 to sub expression
+                popNum1Animation(number_stack.top());
+
+                // pop number into num1
+                int num1 = number_stack.pop();
+
+                // run animation for pushing sub expression result to num stack
+                pushSubExpressionResultAnimation(applyOp(num1, num2, op));
+
+                // evaluate the sub expression and push the result into the number stack
+                number_stack.push(applyOp(num1, num2, op));
             }
 
+            // run animation for pushing operator to op stack
+            pushOpAnimation(i, expression[i]);
+
             // push operator to operator stack
-            std::cout << "pushing " << expression[i] << "\n";
-            ops.push(expression[i]);
+            operator_stack.push(expression[i]);
         }
     }
 
     // evaluate what remains in the number and operator stack
-    while (!ops.empty())
+    while (!operator_stack.empty())
     {
-        // pop top number into num2
-        std::cout << "popping " << nums.top() << "\n";
-        int num2 = nums.pop();
+        // run animation for popping num2 to sub expression
+        popNum2Animation(number_stack.top());
 
-        // pop last operator
-        std::cout << "popping " << ops.top() << "\n";
-        char op = ops.pop();
+        // pop number into num2
+        int num2 = number_stack.pop();
 
-        // pop next number into num1
-        std::cout << "popping " << nums.top() << "\n";
-        int num1 = nums.pop();
+        // run animation for popping op to sub expression
+        popOpAnimation(operator_stack.top());
 
-        // evaluate and push the result into numbers stack
-        std::cout << "pushing " << applyOp(num1, num2, op) << "\n";
-        nums.push(applyOp(num1, num2, op));
+        // pop operator
+        char op = operator_stack.pop();
+
+        // run animation for popping num1 to sub expression
+        popNum1Animation(number_stack.top());
+
+        // pop number into num1
+        int num1 = number_stack.pop();
+
+        // run animation for pushing sub expression result to num stack
+        pushSubExpressionResultAnimation(applyOp(num1, num2, op));
+
+        // evaluate the sub expression and push the result into the number stack
+        number_stack.push(applyOp(num1, num2, op));
 
     }
 
+    // run animation for popping result from num stack
+    popResultAnimation(number_stack.top());
+
     // pop the final number and return it
-    std::cout << "popping " << nums.top() << "\n";
-    return nums.pop();
+    return number_stack.pop();
+}
+
+void printSpaces(int num)
+{
+    // save cursor position
+    coord saved_pos = console::getCursorPos();
+
+    if (num < 0) // number is negative
+    {
+        // print space for negative
+        std::cout << " ";
+    }
+
+    if (std::abs(num) < 10) // 1 digit
+    {
+        std::cout << " ";
+    }
+    else if (std::abs(num) > 9) // 2 digits
+    {
+        std::cout << "  ";
+    }
+    else if (std::abs(num) > 99) // 3 digits
+    {
+        std::cout << "   ";
+    }
+
+    // go back to saved cursor position
+    console::gotoxy(saved_pos);
 }
 
 void drawStacks()
@@ -346,7 +449,6 @@ void drawStacks()
 
     // position cursor for num stack tag
     console::moveCursor(left);
-    console::moveCursor(left);
     console::moveCursor(down);
     
     // save position num stack tag
@@ -403,7 +505,6 @@ void drawStacks()
     // position cursor for operator tag
     console::moveCursor(left);
     console::moveCursor(left);
-    console::moveCursor(left);
     console::moveCursor(down);
 
     // save position for operator tag
@@ -457,32 +558,689 @@ void drawStacks()
         console::sleep(sleep_time);
     }
 
-    // testing
+    // reset text color to white
+    console::setTextColor(yellow);
+}
+
+void pushNumAnimation(int index, int num)
+{
+    // variable for saving cursor position
+    coord pos;
+
+    // go index times forward from expression origin
+    console::gotoxy(expression_origin.x + index, expression_origin.y);
+
+    // go down and print num
+    console::moveCursor(down);
+
+    // save cursor position before printing
+    pos = console::getCursorPos();
+
+    // print num
+    std::cout << num;
+
+    // sleep
+    console::sleep(sleep_time);
+
+    // check where we are relative to num stack x coord
+    if (pos.x > num_stack_top_pos.x) // we are right of the number stack
+    {
+        // go left until we are above the num stack
+        while (pos.x > num_stack_top_pos.x)
+        {
+            // go back to position
+            console::gotoxy(pos);
+
+            // print space over last number
+            printSpaces(num);
+
+            // update x position
+            pos.x--;
+
+            // go to new position
+            console::gotoxy(pos);
+
+            // display num again
+            std::cout << num;
+
+            // sleep
+            console::sleep(sleep_time);
+        }
+    }
+    else if (pos.x < num_stack_top_pos.x) // we are left of number stack
+    {
+        // go right until we are above the num stack
+        while (pos.x < num_stack_top_pos.x)
+        {
+            // go back to position
+            console::gotoxy(pos);
+
+            // print space over last number
+            printSpaces(num);
+
+            // update x position
+            pos.x++;
+
+            // go to new position
+            console::gotoxy(pos);
+
+            // display num again
+            std::cout << num;
+
+            // sleep
+            console::sleep(sleep_time);
+        }
+    }
+
+    // store y value for next available spot in stack
+    int slot_y = num_stack_bottom_pos.y - number_stack.size();
+
+    // go down until we hit the next available spot in the stack
+    while (pos.y < slot_y)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num);
+
+        // update y position
+        pos.y++;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num again
+        std::cout << num;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+    
+}
+
+void pushSubExpressionResultAnimation(int num)
+{
+    // go to result position for sub expression
+    console::gotoxy(sub_expression_pos.x + sub_expr_gap * 4, sub_expression_pos.y);
+
+    // coord for saving position of result
+    coord result = console::getCursorPos();
+
+    // coord for tracking console position
+    coord pos;
+
+    // store destination (top of num stack) coord
+    coord destination = coord(num_stack_bottom_pos.x, num_stack_bottom_pos.y - number_stack.size());
+
+    // go back 2 and display equal sign
+    console::gotoxy(result.x - sub_expr_gap, result.y);
+
+    std::cout << "=";
+
+    // go back to position for result
+    console::gotoxy(result);
+
+    // display result of sub-expression
+    std::cout << num;
+
+    // sleep for a few moments
+    console::sleep(sleep_time * 4);
+
+    // go back to beginning of sub expression
+    console::gotoxy(sub_expression_pos.x, sub_expression_pos.y);
+
+    pos = console::getCursorPos();
+
+    // work towards the result printing spaces over the rest of the expression
+    while (pos.x < result.x)
+    {
+        // display space
+        std::cout << " ";
+
+        // sleep
+        console::sleep(sleep_time);
+
+        // update x position
+        pos.x++;
+    }
+
+    // got back to position of result
+    console::gotoxy(result);
+
+    // set position for moving result 
+    pos = console::getCursorPos();
+
+    // go up until we are 1 above the num stack
+    while (pos.y > num_stack_top_pos.y - 1)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num);
+
+        // update y position
+        pos.y--;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num again
+        std::cout << num;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go left until we are above the destination
+    while (pos.x > destination.x)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num);
+
+        // update x position
+        pos.x--;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num again
+        std::cout << num;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go down until we are in the destination location
+    while (pos.y < destination.y)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num);
+
+        // update y position
+        pos.y++;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num again
+        std::cout << num;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+}
+
+void pushOpAnimation(int index, char op)
+{
+    // variable for saving cursor position
+    coord pos;
+
+    // go index times forward from expression origin
+    console::gotoxy(expression_origin.x + index, expression_origin.y);
+
+    // go down and print num
+    console::moveCursor(down);
+
+    // save cursor position before printing
+    pos = console::getCursorPos();
+
+    // print operator
+    std::cout << op;
+
+    // sleep
+    console::sleep(sleep_time);
+
+    // check where we are relative to op stack x coord
+    if (pos.x > op_stack_top_pos.x) // we are right of the number stack
+    {
+        // go left until we are above the op stack
+        while (pos.x > op_stack_top_pos.x)
+        {
+            // go back to position
+            console::gotoxy(pos);
+
+            // print space over last op
+            std::cout << " ";
+
+            // update x position
+            pos.x--;
+
+            // go to new position
+            console::gotoxy(pos);
+
+            // display op again
+            std::cout << op;
+
+            // sleep
+            console::sleep(sleep_time);
+        }
+    }
+    else if (pos.x < op_stack_top_pos.x) // we are left of op stack
+    {
+        // go right until we are above the op stack
+        while (pos.x < op_stack_top_pos.x)
+        {
+            // go back to position
+            console::gotoxy(pos);
+
+            // print space over last op
+            std::cout << " ";
+
+            // update x position
+            pos.x++;
+
+            // go to new position
+            console::gotoxy(pos);
+
+            // display num again
+            std::cout << op;
+
+            // sleep
+            console::sleep(sleep_time);
+        }
+    }
+
+    // store y value for next available spot in stack
+    int slot_y = op_stack_bottom_pos.y - operator_stack.size();
+
+    // go down until we hit the next available spot in the stack
+    while (pos.y < slot_y)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last op
+        std::cout << " ";
+
+        // update y position
+        pos.y++;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display op again
+        std::cout << op;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+}
+
+void popNum1Animation(int num1)
+{
+    // go to position of top number in number stack
+    console::gotoxy(num_stack_bottom_pos.x, num_stack_bottom_pos.y - number_stack.size() + 1);
+
+    // coord for saving position
+    coord pos = console::getCursorPos();
+
+    // store destination coord
+    coord destination = coord(sub_expression_pos);
+
+    // go up until we are 1 above the stack
+    while (pos.y > num_stack_top_pos.y - 1)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num1);
+
+        // update y position
+        pos.y--;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num1 again
+        std::cout << num1;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go right until we are above the num1 destination x coord
+    while (pos.x < destination.x)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num1);
+
+        // update x position
+        pos.x++;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num1 again
+        std::cout << num1;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go down until we are at the destination coord
+    while (pos.y < destination.y)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num1);
+
+        // update y position
+        pos.y++;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num1 again
+        std::cout << num1;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+}
+
+void popNum2Animation(int num2)
+{
+    // go to position of top number in number stack
+    console::gotoxy(num_stack_bottom_pos.x, num_stack_bottom_pos.y - number_stack.size() + 1);
+
+    // coord for saving position
+    coord pos = console::getCursorPos();
+
+    // store destination coord
+    coord destination = coord(sub_expression_pos.x + sub_expr_gap * 2, sub_expression_pos.y);
+
+    // go up until we are 1 above the stack
+    while (pos.y > num_stack_top_pos.y - 1)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num2);
+
+        // update y position
+        pos.y--;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num2 again
+        std::cout << num2;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go right until we are above the num1 destination x coord
+    while (pos.x < destination.x)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num2);
+
+        // update x position
+        pos.x++;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num1 again
+        std::cout << num2;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go down until we are at the destination coord
+    while (pos.y < destination.y)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num2);
+
+        // update y position
+        pos.y++;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num2 again
+        std::cout << num2;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+}
+
+void popOpAnimation(char op)
+{
+    // go to position of top operator in op stack
+    console::gotoxy(op_stack_bottom_pos.x, op_stack_bottom_pos.y - operator_stack.size() + 1);
+
+    // coord for saving position
+    coord pos = console::getCursorPos();
+
+    // store destination coord
+    coord destination = coord(sub_expression_pos.x + sub_expr_gap, sub_expression_pos.y);
+
+    // go up until we are 1 above the stack
+    while (pos.y > op_stack_top_pos.y - 1)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last operator
+        std::cout << " ";
+
+        // update y position
+        pos.y--;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display op again
+        std::cout << op;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go left until we are above the op destination x coord
+    while (pos.x > destination.x)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last operator
+        std::cout << " ";
+
+        // update x position
+        pos.x--;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display op again
+        std::cout << op;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go down until we are at the destination coord
+    while (pos.y < destination.y)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last operator
+        std::cout << " ";
+
+        // update y position
+        pos.y++;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display op again
+        std::cout << op;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+}
+
+void popParenthesisAnimation(char op)
+{
+    // go to position of top operator in op stack
+    console::gotoxy(op_stack_bottom_pos.x, op_stack_bottom_pos.y - operator_stack.size() + 1);
+
+    // coord for saving position
+    coord pos = console::getCursorPos();
+
+    // store destination coord
+    coord destination = coord(op_stack_top_pos.x, op_stack_top_pos.y - 2);
+
+    // go up until we are 1 above the stack
+    while (pos.y > destination.y)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last operator
+        std::cout << " ";
+
+        // update y position
+        pos.y--;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display op again
+        std::cout << op;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go to destinaion
+    console::gotoxy(destination.x - 2, destination.y);
+
+    console::setTextColor(red);
+
+    // display boom
+    std::cout << "BOOM!";
+
     console::setTextColor(yellow);
 
-    console::gotoxy(num_stack_bottom_pos);
-    std::cout << "n";
+    // sleep for a few moments
+    console::sleep(sleep_time * 4);
 
-    console::gotoxy(num_stack_top_pos);
-    std::cout << "n";
+    // go to print boom
+    console::gotoxy(destination.x - 2, destination.y);
 
-    console::gotoxy(op_stack_bottom_pos);
-    std::cout << "o";
-
-    console::gotoxy(op_stack_top_pos);
-    std::cout << "o";
-
-    console::gotoxy(sub_expression_pos);
-    std::cout << "s u b = r";
-
-    // reset text color to white
-    console::setTextColor(white);
+    // display spaces over boom
+    std::cout << "     ";
 }
 
-void pushAnimation()
+void popResultAnimation(int num)
 {
-}
+    // go to position of top number in number stack
+    console::gotoxy(num_stack_bottom_pos.x, num_stack_bottom_pos.y - number_stack.size() + 1);
 
-void popAnimation()
-{
+    // coord for saving position
+    coord pos = console::getCursorPos();
+
+    // store destination coord
+    coord destination = coord(expression_origin.x + expression.size() + 3, expression_origin.y);
+
+    // go up until we are 1 above the stack
+    while (pos.y > num_stack_top_pos.y - 1)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num);
+
+        // update y position
+        pos.y--;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num again
+        std::cout << num;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go right until we are under the num destination x coord
+    while (pos.x < destination.x)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num);
+
+        // update x position
+        pos.x++;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num1 again
+        std::cout << num;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go up until we are at the destination coord
+    while (pos.y > destination.y)
+    {
+        // go back to position
+        console::gotoxy(pos);
+
+        // print space over last number
+        printSpaces(num);
+
+        // update y position
+        pos.y--;
+
+        // go to new position
+        console::gotoxy(pos);
+
+        // display num1 again
+        std::cout << num;
+
+        // sleep
+        console::sleep(sleep_time);
+    }
+
+    // go back two
+    console::gotoxy(pos.x - 2, pos.y);
+
+    // print equal sign
+    std::cout << "=";
 }
